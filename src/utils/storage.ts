@@ -1,6 +1,8 @@
-import type { Transaction, DailySummary, MonthlySummary } from '../types'
+import type { Transaction, DailySummary, MonthlySummary, SavingsGoal, WeeklyData, CategoryChartData } from '../types'
+import { CATEGORY_LABELS, EXPENSE_CATEGORIES } from '../types'
 
 const STORAGE_KEY = 'finance_transactions'
+const GOALS_STORAGE_KEY = 'finance_savings_goals'
 
 export function loadTransactions(): Transaction[] {
   const data = localStorage.getItem(STORAGE_KEY)
@@ -98,4 +100,83 @@ export function calculateMonthlySummary(transactions: Transaction[], month: stri
     balance: totalIncome - totalExpense,
     categoryBreakdown,
   }
+}
+
+export function loadSavingsGoals(): SavingsGoal[] {
+  const data = localStorage.getItem(GOALS_STORAGE_KEY)
+  if (!data) return []
+  try {
+    return JSON.parse(data) as SavingsGoal[]
+  } catch {
+    return []
+  }
+}
+
+export function saveSavingsGoals(goals: SavingsGoal[]): void {
+  localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(goals))
+}
+
+export function calculateWeeklyData(transactions: Transaction[], month: string): WeeklyData[] {
+  const monthTransactions = transactions.filter(t => t.date.startsWith(month))
+  const weeks: Record<string, { income: number; expense: number }> = {}
+
+  for (const t of monthTransactions) {
+    const date = new Date(t.date)
+    const weekNum = Math.ceil(date.getDate() / 7)
+    const weekKey = `第${weekNum}周`
+
+    if (!weeks[weekKey]) {
+      weeks[weekKey] = { income: 0, expense: 0 }
+    }
+
+    if (t.type === 'income') {
+      weeks[weekKey].income += t.amount
+    } else {
+      weeks[weekKey].expense += t.amount
+    }
+  }
+
+  const result: WeeklyData[] = []
+  for (let i = 1; i <= 5; i++) {
+    const weekKey = `第${i}周`
+    result.push({
+      week: weekKey,
+      income: weeks[weekKey]?.income || 0,
+      expense: weeks[weekKey]?.expense || 0,
+    })
+  }
+
+  return result
+}
+
+export function calculateCategoryPieData(transactions: Transaction[], month: string): CategoryChartData[] {
+  const monthTransactions = transactions.filter(t => t.date.startsWith(month) && t.type === 'expense')
+
+  const categoryTotals: Record<string, number> = {}
+  let totalExpense = 0
+
+  for (const t of monthTransactions) {
+    categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount
+    totalExpense += t.amount
+  }
+
+  const colors = ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF']
+
+  return Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([category, amount], index) => ({
+      category: CATEGORY_LABELS[category as keyof typeof CATEGORY_LABELS] || category,
+      amount,
+      percentage: totalExpense > 0 ? Math.round((amount / totalExpense) * 100) : 0,
+      color: colors[index % colors.length],
+      icon: EXPENSE_CATEGORIES.find(c => c.value === category)?.icon || '📦',
+    }))
+}
+
+export function getAvailableMonths(transactions: Transaction[]): string[] {
+  const months = new Set<string>()
+  for (const t of transactions) {
+    months.add(t.date.substring(0, 7))
+  }
+  return Array.from(months).sort().reverse()
 }
