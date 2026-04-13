@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import TransactionForm from './components/TransactionForm.vue'
 import TransactionTimeline from './components/TransactionTimeline.vue'
 import SummaryPanel from './components/SummaryPanel.vue'
+import StatisticsChart from './components/StatisticsChart.vue'
+import SavingsGoal from './components/SavingsGoal.vue'
 import type { Transaction } from './types'
 import { 
   loadTransactions, 
@@ -16,6 +18,7 @@ const transactions = ref<Transaction[]>([])
 const showForm = ref(false)
 const editingTransaction = ref<Transaction | null>(null)
 const currentMonth = ref(getCurrentMonth())
+const activeView = ref<'timeline' | 'statistics' | 'goals'>('timeline')
 
 const dailySummaries = computed(() => {
   const monthTransactions = transactions.value.filter(t => 
@@ -86,10 +89,32 @@ function goToToday() {
     <header class="header">
       <div class="header-content">
         <h1 class="logo">💰 财务流水看板</h1>
-        <button class="add-btn" @click="handleAddNew">
-          <span class="add-icon">+</span>
-          新增记录
-        </button>
+        <div class="header-actions">
+          <div class="view-tabs">
+            <button 
+              :class="['view-tab', { active: activeView === 'timeline' }]"
+              @click="activeView = 'timeline'"
+            >
+              📋 流水
+            </button>
+            <button 
+              :class="['view-tab', { active: activeView === 'statistics' }]"
+              @click="activeView = 'statistics'"
+            >
+              📊 统计
+            </button>
+            <button 
+              :class="['view-tab', { active: activeView === 'goals' }]"
+              @click="activeView = 'goals'"
+            >
+              🎯 目标
+            </button>
+          </div>
+          <button class="add-btn" @click="handleAddNew">
+            <span class="add-icon">+</span>
+            新增记录
+          </button>
+        </div>
       </div>
     </header>
 
@@ -102,14 +127,35 @@ function goToToday() {
           <button class="today-btn" @click="goToToday">今</button>
         </div>
         <SummaryPanel :summary="monthlySummary" :current-month="currentMonth" />
+        
+        <div v-if="activeView === 'timeline'" class="sidebar-extra">
+          <StatisticsChart :transactions="transactions" :current-month="currentMonth" />
+        </div>
+        
+        <div v-if="activeView === 'goals'" class="sidebar-extra">
+          <SavingsGoal :transactions="transactions" />
+        </div>
       </aside>
 
       <section class="content">
-        <TransactionTimeline 
-          :daily-summaries="dailySummaries"
-          @edit="handleEdit"
-          @delete="handleDelete"
-        />
+        <div v-if="activeView === 'timeline'">
+          <TransactionTimeline 
+            :daily-summaries="dailySummaries"
+            @edit="handleEdit"
+            @delete="handleDelete"
+          />
+        </div>
+        
+        <div v-if="activeView === 'statistics'" class="statistics-view">
+          <StatisticsChart :transactions="transactions" :current-month="currentMonth" />
+          <div class="chart-section">
+            <SavingsGoal :transactions="transactions" />
+          </div>
+        </div>
+        
+        <div v-if="activeView === 'goals'" class="goals-view">
+          <SavingsGoal :transactions="transactions" />
+        </div>
       </section>
     </main>
 
@@ -156,6 +202,41 @@ function goToToday() {
   color: #333;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  background: #f5f5f5;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.view-tab {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: #666;
+}
+
+.view-tab.active {
+  background: white;
+  color: #333;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.view-tab:hover:not(.active) {
+  color: #333;
+}
+
 .add-btn {
   display: flex;
   align-items: center;
@@ -196,6 +277,10 @@ function goToToday() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.sidebar-extra {
+  flex-shrink: 0;
 }
 
 .month-nav {
@@ -258,6 +343,21 @@ function goToToday() {
   flex-direction: column;
 }
 
+.statistics-view {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+.chart-section {
+  flex: 1;
+}
+
+.goals-view {
+  height: 100%;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -291,10 +391,27 @@ function goToToday() {
 
   .header-content {
     padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .logo {
     font-size: 20px;
+  }
+
+  .view-tabs {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .add-btn {
+    padding: 10px 16px;
+    font-size: 14px;
   }
 }
 </style>

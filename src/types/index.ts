@@ -65,3 +65,28 @@ export const CATEGORY_ICONS: Record<Category, string> = {
   bonus: '🎁',
   other: '💵',
 }
+
+export interface SavingsGoal {
+  id: string
+  name: string
+  targetAmount: number
+  currentAmount: number
+  createdAt: number
+  deadline?: string
+  icon: string
+  color: string
+}
+
+export interface WeeklyData {
+  week: string
+  income: number
+  expense: number
+}
+
+export interface CategoryChartData {
+  category: string
+  amount: number
+  percentage: number
+  color: string
+  icon: string
+}
