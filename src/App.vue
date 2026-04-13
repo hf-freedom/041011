@@ -3,6 +3,8 @@ import { ref, computed, onMounted } from 'vue'
 import TransactionForm from './components/TransactionForm.vue'
 import TransactionTimeline from './components/TransactionTimeline.vue'
 import SummaryPanel from './components/SummaryPanel.vue'
+import StatisticsPanel from './components/StatisticsPanel.vue'
+import SavingsGoals from './components/SavingsGoals.vue'
 import type { Transaction } from './types'
 import { 
   loadTransactions, 
@@ -16,6 +18,7 @@ const transactions = ref<Transaction[]>([])
 const showForm = ref(false)
 const editingTransaction = ref<Transaction | null>(null)
 const currentMonth = ref(getCurrentMonth())
+const activeTab = ref<'timeline' | 'statistics' | 'goals'>('timeline')
 
 const dailySummaries = computed(() => {
   const monthTransactions = transactions.value.filter(t => 
@@ -105,11 +108,43 @@ function goToToday() {
       </aside>
 
       <section class="content">
-        <TransactionTimeline 
-          :daily-summaries="dailySummaries"
-          @edit="handleEdit"
-          @delete="handleDelete"
-        />
+        <div class="tabs">
+          <button 
+            :class="['tab-btn', { active: activeTab === 'timeline' }]"
+            @click="activeTab = 'timeline'"
+          >
+            📋 收支记录
+          </button>
+          <button 
+            :class="['tab-btn', { active: activeTab === 'statistics' }]"
+            @click="activeTab = 'statistics'"
+          >
+            📊 统计图表
+          </button>
+          <button 
+            :class="['tab-btn', { active: activeTab === 'goals' }]"
+            @click="activeTab = 'goals'"
+          >
+            🎯 储蓄目标
+          </button>
+        </div>
+        
+        <div class="tab-content">
+          <TransactionTimeline 
+            v-if="activeTab === 'timeline'"
+            :daily-summaries="dailySummaries"
+            @edit="handleEdit"
+            @delete="handleDelete"
+          />
+          <StatisticsPanel 
+            v-else-if="activeTab === 'statistics'"
+            :transactions="transactions"
+          />
+          <SavingsGoals 
+            v-else-if="activeTab === 'goals'"
+            :transactions="transactions"
+          />
+        </div>
       </section>
     </main>
 
@@ -256,6 +291,39 @@ function goToToday() {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
   display: flex;
   flex-direction: column;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 12px;
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  background: #f5f5f5;
+}
+
+.tab-btn.active {
+  background: #4CAF50;
+  color: white;
+}
+
+.tab-content {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .modal-overlay {
