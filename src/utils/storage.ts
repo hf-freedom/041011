@@ -1,6 +1,21 @@
-import type { Transaction, DailySummary, MonthlySummary } from '../types'
+import type { Transaction, DailySummary, MonthlySummary, WeeklySummary, SavingGoal } from '../types'
 
 const STORAGE_KEY = 'finance_transactions'
+const GOALS_STORAGE_KEY = 'finance_goals'
+
+export function loadGoals(): SavingGoal[] {
+  const data = localStorage.getItem(GOALS_STORAGE_KEY)
+  if (!data) return []
+  try {
+    return JSON.parse(data) as SavingGoal[]
+  } catch {
+    return []
+  }
+}
+
+export function saveGoals(goals: SavingGoal[]): void {
+  localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(goals))
+}
 
 export function loadTransactions(): Transaction[] {
   const data = localStorage.getItem(STORAGE_KEY)
@@ -98,4 +113,38 @@ export function calculateMonthlySummary(transactions: Transaction[], month: stri
     balance: totalIncome - totalExpense,
     categoryBreakdown,
   }
+}
+
+export function calculateWeeklySummary(transactions: Transaction[], month: string): WeeklySummary[] {
+  const monthTransactions = transactions.filter(t => t.date.startsWith(month))
+  const weeks: Record<string, WeeklySummary> = {}
+
+  for (const t of monthTransactions) {
+    const date = new Date(t.date)
+    const dayOfMonth = date.getDate()
+    const weekNum = Math.ceil(dayOfMonth / 7)
+    const weekKey = `第${weekNum}周`
+
+    if (!weeks[weekKey]) {
+      weeks[weekKey] = { week: weekKey, income: 0, expense: 0 }
+    }
+    if (t.type === 'income') {
+      weeks[weekKey].income += t.amount
+    } else {
+      weeks[weekKey].expense += t.amount
+    }
+  }
+
+  return Object.values(weeks).sort((a, b) => a.week.localeCompare(b.week))
+}
+
+export function getExpenseByCategory(transactions: Transaction[], month: string): { category: string; amount: number }[] {
+  const monthTransactions = transactions.filter(t => t.date.startsWith(month) && t.type === 'expense')
+  const categories: Record<string, number> = {}
+
+  for (const t of monthTransactions) {
+    categories[t.category] = (categories[t.category] || 0) + t.amount
+  }
+
+  return Object.entries(categories).map(([category, amount]) => ({ category, amount }))
 }

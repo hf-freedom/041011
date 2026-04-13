@@ -29,6 +29,25 @@ export interface MonthlySummary {
   categoryBreakdown: Record<string, number>
 }
 
+export interface WeeklySummary {
+  week: string
+  income: number
+  expense: number
+}
+
+export interface SavingGoal {
+  id: string
+  name: string
+  targetAmount: number
+  currentAmount: number
+  deadline: string
+  icon: string
+  description: string
+  linkedCategory: string | null
+  autoDeposit: boolean
+  createdAt: number
+}
+
 export const EXPENSE_CATEGORIES: { value: ExpenseCategory; label: string; icon: string }[] = [
   { value: 'catering', label: '餐饮', icon: '🍜' },
   { value: 'transport', label: '交通', icon: '🚗' },
